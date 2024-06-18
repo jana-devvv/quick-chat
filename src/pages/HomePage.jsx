@@ -24,10 +24,14 @@ function HomePage() {
   }
 
   useEffect(() => {
-    pb.realtime.subscribe("message", function (e) {
-      let x = messages.filter((item) => item.id !== e.record.id);
-      setMessages((prevMessage) => [...prevMessage, e.record]);
+    pb.collection("message").subscribe("*", async ({ action, record }) => {
+      if (action == "create") {
+        const user = await pb.collection("users").getOne(record.user);
+        record.expand = { user };
+        setMessages((prevMessage) => [...prevMessage, record]);
+      }
     });
+
     return () => {
       pb.realtime.unsubscribe();
     };
@@ -41,35 +45,14 @@ function HomePage() {
     route("/login");
   }
 
-  async function submitChat(e) {
-    e.preventDefault();
-
-    const payload = {
-      message: chat,
-      user: user.id,
-    };
-
-    const record = await pb.collection("message").create(payload);
-
-    setChat("");
-  }
-
   return (
     <>
-      <div className="flex justify-center items-center min-h-screen flex-col">
+      <div className="flex mb-20  min-h-screen flex-col">
         {messages.map((data, index) => (
           <div className="flex">
             <Message data={data} key={index} />
           </div>
         ))}
-        <form onSubmit={submitChat}>
-          <input
-            type="text"
-            value={chat}
-            onChange={(e) => setChat(e.target.value)}
-          />
-          <button type="submit">Kirim</button>
-        </form>
       </div>
     </>
   );
